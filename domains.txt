@@ -1,0 +1,61 @@
+# Domain Configuration for AI Personal Finance Mentor
+# =================================================
+
+# Primary Production Domain
+financeai.com
+
+# Alternative Domains (Redirects to primary)
+www.financeai.com
+finance-ai.com
+www.finance-ai.com
+aifinance.app
+www.aifinance.app
+
+# Environment-Specific Subdomains
+staging.financeai.com
+dev.financeai.com
+api.financeai.com
+cdn.financeai.com
+
+# Feature-Specific Subdomains
+app.financeai.com
+dashboard.financeai.com
+blog.financeai.com
+docs.financeai.com
+admin.financeai.com
+
+# Regional Domains (Future expansion)
+financeai.eu
+financeai.co.uk
+financeai.ca
+financeai.com.au
+
+# Vercel Default Domains (Auto-generated)
+ai-personal-finance-mentor.vercel.app
+ai-personal-finance-mentor-git-main.vercel.app
+ai-personal-finance-mentor-team-finance-ai.vercel.app
+
+# Branch-Specific Domains
+ai-personal-finance-mentor-git-develop.vercel.app
+ai-personal-finance-mentor-git-staging.vercel.app
+
+# DNS Configuration Notes:
+# ========================
+# 1. Configure A/AAAA records for apex domain (financeai.com)
+# 2. Configure CNAME records for www subdomain
+# 3. Set up SSL certificates for all domains
+# 4. Configure redirects from alternative domains to primary
+# 5. Set up CDN for static assets (cdn.financeai.com)
+# 6. Configure API subdomain for backend services
+
+# SSL Certificate Requirements:
+# ============================
+# - Wildcard certificate for *.financeai.com
+# - Individual certificates for alternative domains
+# - Let's Encrypt or commercial SSL provider
+
+# Security Headers:
+# ================
+# - HSTS for all domains
+# - CSP headers configured per environment
+# - CORS origins configured for API subdomain
