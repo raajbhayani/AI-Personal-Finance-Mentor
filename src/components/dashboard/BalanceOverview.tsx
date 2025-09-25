@@ -83,7 +83,7 @@ export default function BalanceOverview({ data = defaultData }: BalanceOverviewP
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       {cards.map((card, index) => {
         const Icon = card.icon;
         const isPositive = card.change >= 0;
@@ -105,7 +105,7 @@ export default function BalanceOverview({ data = defaultData }: BalanceOverviewP
                 {card.primary && (
                   <button
                     onClick={() => setIsBalanceVisible(!isBalanceVisible)}
-                    className="p-1.5 rounded-md hover:bg-gray-100 transition-colors duration-200"
+                    className="p-1.5 rounded-md hover:bg-gray-100 transition-colors duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
                   >
                     {isBalanceVisible ? (
                       <Eye className="h-4 w-4 text-gray-500" />
@@ -122,7 +122,7 @@ export default function BalanceOverview({ data = defaultData }: BalanceOverviewP
             <CardContent>
               <div className="flex items-baseline justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">
                     {card.value}
                   </div>
                   <div className={`flex items-center mt-1 px-2 py-1 rounded-full text-xs font-medium ${changeBg} ${changeColor}`}>

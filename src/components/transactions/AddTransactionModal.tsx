@@ -1,72 +1,38 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, Plus, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Plus, X, DollarSign, Calendar, Hash } from 'lucide-react';
 import Modal from '../ui/Modal';
-import Input from '../ui/Input';
-import CurrencyInput from '../ui/CurrencyInput';
-import DatePicker from '../ui/DatePicker';
-import Select, { SelectOption } from '../ui/Select';
-import Toggle from '../ui/Toggle';
-import Button from '../ui/Button';
-import { validateField } from '../../lib/utils/validation';
-
-interface TransactionFormData {
-  type: 'income' | 'expense';
-  amount: number;
-  description: string;
-  category: string;
-  date: Date;
-  notes?: string;
-  tags: string[];
-}
+import { InputField, SelectField, TextAreaField } from '../ui/FormField';
+import ValidationFeedback, { FormValidationSummary } from '../ui/ValidationFeedback';
+import { createTransactionSchema, type CreateTransactionData } from '@/lib/validation/schemas';
+import { useFormValidation } from '@/lib/hooks/useFormValidation';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: TransactionFormData) => Promise<void>;
-  initialData?: Partial<TransactionFormData>;
+  onSubmit: (data: CreateTransactionData) => Promise<void>;
+  initialData?: Partial<CreateTransactionData>;
 }
 
-const incomeCategories: SelectOption[] = [
-  { value: 'salary', label: 'Salary', icon: '💼' },
-  { value: 'freelance', label: 'Freelance', icon: '💻' },
-  { value: 'business', label: 'Business', icon: '🏢' },
-  { value: 'investment', label: 'Investment', icon: '📈' },
-  { value: 'rental', label: 'Rental Income', icon: '🏠' },
-  { value: 'dividend', label: 'Dividend', icon: '💰' },
-  { value: 'bonus', label: 'Bonus', icon: '🎁' },
-  { value: 'other-income', label: 'Other Income', icon: '💵' },
-];
-
-const expenseCategories: SelectOption[] = [
-  { value: 'food', label: 'Food & Dining', icon: '🍽️' },
-  { value: 'transport', label: 'Transportation', icon: '🚗' },
-  { value: 'shopping', label: 'Shopping', icon: '🛍️' },
-  { value: 'entertainment', label: 'Entertainment', icon: '🎬' },
-  { value: 'bills', label: 'Bills & Utilities', icon: '⚡' },
-  { value: 'healthcare', label: 'Healthcare', icon: '🏥' },
-  { value: 'education', label: 'Education', icon: '📚' },
-  { value: 'travel', label: 'Travel', icon: '✈️' },
-  { value: 'home', label: 'Home & Garden', icon: '🏠' },
-  { value: 'insurance', label: 'Insurance', icon: '🛡️' },
-  { value: 'fitness', label: 'Fitness & Sports', icon: '💪' },
-  { value: 'other-expense', label: 'Other Expense', icon: '📦' },
+const categoryOptions = [
+  { value: 'food_dining', label: '🍽️ Food & Dining' },
+  { value: 'transportation', label: '🚗 Transportation' },
+  { value: 'shopping', label: '🛍️ Shopping' },
+  { value: 'entertainment', label: '🎬 Entertainment' },
+  { value: 'bills_utilities', label: '⚡ Bills & Utilities' },
+  { value: 'healthcare', label: '🏥 Healthcare' },
+  { value: 'education', label: '📚 Education' },
+  { value: 'travel', label: '✈️ Travel' },
+  { value: 'business', label: '💼 Business' },
+  { value: 'gifts_donations', label: '🎁 Gifts & Donations' },
+  { value: 'investments', label: '📈 Investments' },
+  { value: 'other', label: '📦 Other' },
 ];
 
 const typeOptions = [
-  {
-    value: 'income',
-    label: 'Income',
-    icon: <TrendingUp className="h-4 w-4" />,
-    color: 'emerald'
-  },
-  {
-    value: 'expense',
-    label: 'Expense',
-    icon: <TrendingDown className="h-4 w-4" />,
-    color: 'red'
-  },
+  { value: 'income', label: 'Income' },
+  { value: 'expense', label: 'Expense' },
 ];
 
 export default function AddTransactionModal({
@@ -75,103 +41,56 @@ export default function AddTransactionModal({
   onSubmit,
   initialData,
 }: AddTransactionModalProps) {
-  const [formData, setFormData] = useState<TransactionFormData>({
-    type: 'expense',
-    amount: 0,
-    description: '',
-    category: '',
-    date: new Date(),
-    notes: '',
-    tags: [],
-    ...initialData,
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string>('');
   const [tagInput, setTagInput] = useState('');
 
-  const categories = formData.type === 'income' ? incomeCategories : expenseCategories;
-
-  const handleInputChange = (field: keyof TransactionFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
+  const {
+    values,
+    setValue,
+    isValid,
+    errors,
+    isSubmitting,
+    handleSubmit,
+    setError,
+    clearErrors,
+    getFieldProps,
+    reset,
+  } = useFormValidation(createTransactionSchema, {
+    description: '',
+    amount: 0,
+    type: 'expense' as 'income' | 'expense',
+    category: 'other' as any,
+    date: new Date().toISOString().split('T')[0],
+    tags: [],
+    notes: '',
+    ...initialData,
+  }, {
+    validateOnChange: true,
+    validateOnBlur: true,
+    debounceDelay: 300,
+  });
 
   const addTag = () => {
-    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, tagInput.trim()]
-      }));
+    if (tagInput.trim() && !values.tags.includes(tagInput.trim())) {
+      setValue('tags', [...values.tags, tagInput.trim()]);
       setTagInput('');
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
+    setValue('tags', values.tags.filter(tag => tag !== tagToRemove));
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.amount || formData.amount <= 0) {
-      newErrors.amount = 'Amount must be greater than 0';
-    }
-
-    const descriptionError = validateField(formData.description, {
-      required: true,
-      minLength: 2,
-      maxLength: 100,
-    });
-    if (descriptionError) {
-      newErrors.description = descriptionError;
-    }
-
-    if (!formData.category) {
-      newErrors.category = 'Please select a category';
-    }
-
-    if (!formData.date) {
-      newErrors.date = 'Date is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
+  const handleFormSubmit = async (data: CreateTransactionData) => {
+    setServerError('');
 
     try {
-      await onSubmit(formData);
+      await onSubmit(data);
       onClose();
-      // Reset form
-      setFormData({
-        type: 'expense',
-        amount: 0,
-        description: '',
-        category: '',
-        date: new Date(),
-        notes: '',
-        tags: [],
-      });
+      reset();
     } catch (error) {
       console.error('Error submitting transaction:', error);
-    } finally {
-      setIsLoading(false);
+      setServerError(error instanceof Error ? error.message : 'An error occurred');
     }
   };
 
@@ -182,77 +101,73 @@ export default function AddTransactionModal({
       title={initialData ? 'Edit Transaction' : 'Add Transaction'}
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+        {serverError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{serverError}</p>
+          </div>
+        )}
+
+        <FormValidationSummary errors={errors} />
+
         {/* Transaction Type Toggle */}
-        <Toggle
+        <SelectField
           label="Transaction Type"
           options={typeOptions}
-          value={formData.type}
+          {...getFieldProps('type')}
           onChange={(value) => {
-            handleInputChange('type', value);
-            // Reset category when type changes
-            handleInputChange('category', '');
+            setValue('type', value);
+            setValue('category', '');
           }}
-          fullWidth
+          required
         />
 
         {/* Amount Input */}
-        <CurrencyInput
+        <InputField
           label="Amount"
-          value={formData.amount}
-          onChange={(value) => handleInputChange('amount', value)}
-          error={errors.amount}
+          type="number"
+          step="0.01"
+          min="0"
+          {...getFieldProps('amount')}
           placeholder="0.00"
           required
         />
 
         {/* Description Input */}
-        <Input
+        <InputField
           label="Description"
-          value={formData.description}
-          onChange={(e) => handleInputChange('description', e.target.value)}
-          error={errors.description}
+          {...getFieldProps('description')}
           placeholder="Enter transaction description"
           maxLength={100}
           required
         />
 
         {/* Category Selection */}
-        <Select
+        <SelectField
           label="Category"
-          options={categories}
-          value={formData.category}
-          onChange={(value) => handleInputChange('category', value)}
-          error={errors.category}
+          options={categoryOptions}
+          {...getFieldProps('category')}
           placeholder="Select a category"
-          searchable
           required
         />
 
         {/* Date Picker */}
-        <DatePicker
+        <InputField
           label="Date"
-          value={formData.date}
-          onChange={(date) => handleInputChange('date', date)}
-          error={errors.date}
-          maxDate={new Date()}
+          type="date"
+          {...getFieldProps('date')}
+          max={new Date().toISOString().split('T')[0]}
           required
         />
 
         {/* Notes Input */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Notes (Optional)
-          </label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => handleInputChange('notes', e.target.value)}
-            placeholder="Add any additional notes..."
-            rows={3}
-            className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-gray-400 resize-none"
-            maxLength={500}
-          />
-        </div>
+        <TextAreaField
+          label="Notes (Optional)"
+          {...getFieldProps('notes')}
+          placeholder="Add any additional notes..."
+          rows={3}
+          maxLength={500}
+        />
 
         {/* Tags Input */}
         <div className="space-y-2">
@@ -260,10 +175,11 @@ export default function AddTransactionModal({
             Tags (Optional)
           </label>
           <div className="flex space-x-2">
-            <Input
+            <input
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               placeholder="Add a tag"
+              className="flex-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 hover:border-gray-400"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -271,19 +187,19 @@ export default function AddTransactionModal({
                 }
               }}
             />
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={addTag}
               disabled={!tagInput.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
 
-          {formData.tags.length > 0 && (
+          {values.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
-              {formData.tags.map((tag, index) => (
+              {values.tags.map((tag, index) => (
                 <span
                   key={index}
                   className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
@@ -302,25 +218,25 @@ export default function AddTransactionModal({
           )}
         </div>
 
+        <ValidationFeedback error={serverError} />
+
         {/* Form Actions */}
         <div className="flex space-x-3 pt-6 border-t border-gray-200">
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={onClose}
-            disabled={isLoading}
-            className="flex-1"
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
             type="submit"
-            loading={isLoading}
-            disabled={isLoading}
-            className="flex-1"
+            disabled={isSubmitting || !isValid}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {initialData ? 'Update Transaction' : 'Add Transaction'}
-          </Button>
+            {isSubmitting ? 'Saving...' : (initialData ? 'Update Transaction' : 'Add Transaction')}
+          </button>
         </div>
       </form>
     </Modal>

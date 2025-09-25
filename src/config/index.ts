@@ -13,7 +13,7 @@ export const config = {
   app: {
     name: 'AI Personal Finance Mentor',
     description: 'Your intelligent personal finance advisor - Developed by Raj',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
     version: '1.0.0',
     developer: 'Raj',
   },
@@ -25,7 +25,7 @@ export const config = {
     jwtSecret: process.env.JWT_SECRET!,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
     nextAuthSecret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET!,
-    nextAuthUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    nextAuthUrl: process.env.NEXTAUTH_URL || 'http://localhost:3001',
     bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10),
   },
   ai: {

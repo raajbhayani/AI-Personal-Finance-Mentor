@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -65,46 +65,100 @@ interface BaseChartProps {
   options?: ChartOptions<any>;
   className?: string;
   height?: number;
+  isMobile?: boolean;
 }
 
-// Common chart options
-const getCommonOptions = (type: string): ChartOptions<any> => ({
+// Hook to detect mobile screen size
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+}
+
+// Common chart options with mobile optimization
+const getCommonOptions = (type: string, isMobile = false): ChartOptions<any> => ({
   responsive: true,
   maintainAspectRatio: false,
+  interaction: {
+    intersect: false,
+    mode: 'index',
+  },
+  onHover: (event, elements) => {
+    if (event.native?.target) {
+      (event.native.target as HTMLElement).style.cursor = elements.length > 0 ? 'pointer' : 'default';
+    }
+  },
   plugins: {
     legend: {
-      position: 'bottom' as const,
+      position: isMobile ? 'bottom' : 'bottom' as const,
+      align: 'center',
       labels: {
         usePointStyle: true,
         pointStyle: 'circle',
-        padding: 20,
+        padding: isMobile ? 15 : 20,
+        boxWidth: isMobile ? 12 : 15,
+        boxHeight: isMobile ? 12 : 15,
         font: {
           family: 'Inter, system-ui, sans-serif',
-          size: 12,
+          size: isMobile ? 11 : 12,
           weight: '500'
         },
-        color: '#374151'
+        color: '#374151',
+        generateLabels: function(chart) {
+          const labels = ChartJS.defaults.plugins.legend.labels.generateLabels(chart);
+          // Limit legend items on mobile for better readability
+          return isMobile && labels.length > 6 ? labels.slice(0, 5).concat([{
+            text: '... +' + (labels.length - 5) + ' more',
+            fillStyle: '#6B7280',
+            strokeStyle: '#6B7280',
+            hidden: false,
+            lineCap: 'butt' as const,
+            lineDash: [],
+            lineDashOffset: 0,
+            lineJoin: 'miter' as const,
+            pointStyle: 'circle',
+            rotation: 0,
+            textAlign: 'left' as const,
+            borderRadius: 0,
+            datasetIndex: -1
+          }]) : labels;
+        }
       }
     },
     tooltip: {
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: 'rgba(0, 0, 0, 0.85)',
       titleColor: '#fff',
       bodyColor: '#fff',
       borderColor: 'rgba(255, 255, 255, 0.1)',
       borderWidth: 1,
-      cornerRadius: 8,
+      cornerRadius: isMobile ? 12 : 8,
       displayColors: true,
-      padding: 12,
+      padding: isMobile ? 16 : 12,
+      caretPadding: isMobile ? 8 : 6,
       titleFont: {
         family: 'Inter, system-ui, sans-serif',
-        size: 13,
+        size: isMobile ? 14 : 13,
         weight: '600'
       },
       bodyFont: {
         family: 'Inter, system-ui, sans-serif',
-        size: 12,
+        size: isMobile ? 13 : 12,
         weight: '400'
       },
+      titleSpacing: isMobile ? 8 : 6,
+      bodySpacing: isMobile ? 6 : 4,
+      footerSpacing: isMobile ? 8 : 6,
       callbacks: {
         label: function(context: any) {
           const label = context.dataset.label || '';
@@ -130,9 +184,22 @@ const getCommonOptions = (type: string): ChartOptions<any> => ({
       ticks: {
         font: {
           family: 'Inter, system-ui, sans-serif',
-          size: 11
+          size: isMobile ? 10 : 11
         },
-        color: '#6B7280'
+        color: '#6B7280',
+        maxRotation: isMobile ? 45 : 0,
+        minRotation: isMobile ? 45 : 0,
+        maxTicksLimit: isMobile ? 6 : 12,
+        callback: function(value: any, index: number) {
+          // On mobile, show fewer ticks to prevent overcrowding
+          if (isMobile && this.getLabelForValue) {
+            const label = this.getLabelForValue(value);
+            return typeof label === 'string' && label.length > 8
+              ? label.substring(0, 6) + '...'
+              : label;
+          }
+          return this.getLabelForValue ? this.getLabelForValue(value) : value;
+        }
       }
     },
     y: {
@@ -143,16 +210,19 @@ const getCommonOptions = (type: string): ChartOptions<any> => ({
       ticks: {
         font: {
           family: 'Inter, system-ui, sans-serif',
-          size: 11
+          size: isMobile ? 10 : 11
         },
         color: '#6B7280',
+        maxTicksLimit: isMobile ? 5 : 8,
         callback: function(value: any) {
-          return new Intl.NumberFormat('en-US', {
+          const formatted = new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
             minimumFractionDigits: 0,
-            maximumFractionDigits: 0
+            maximumFractionDigits: 0,
+            notation: isMobile && Math.abs(value) >= 1000 ? 'compact' : 'standard'
           }).format(value);
+          return formatted;
         }
       }
     }
@@ -160,59 +230,75 @@ const getCommonOptions = (type: string): ChartOptions<any> => ({
 });
 
 // Line Chart Component
-export function LineChart({ data, options, className, height = 300 }: BaseChartProps) {
-  const defaultOptions = getCommonOptions('line');
+export function LineChart({ data, options, className, height = 300, isMobile: propIsMobile }: BaseChartProps) {
+  const detectedIsMobile = useIsMobile();
+  const isMobile = propIsMobile ?? detectedIsMobile;
+  const mobileHeight = isMobile ? Math.min(height, 250) : height;
+
+  const defaultOptions = getCommonOptions('line', isMobile);
   const mergedOptions = { ...defaultOptions, ...options };
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
+    <div className={cn('w-full touch-manipulation', className)} style={{ height: mobileHeight }}>
       <Line data={data} options={mergedOptions} />
     </div>
   );
 }
 
 // Bar Chart Component
-export function BarChart({ data, options, className, height = 300 }: BaseChartProps) {
-  const defaultOptions = getCommonOptions('bar');
+export function BarChart({ data, options, className, height = 300, isMobile: propIsMobile }: BaseChartProps) {
+  const detectedIsMobile = useIsMobile();
+  const isMobile = propIsMobile ?? detectedIsMobile;
+  const mobileHeight = isMobile ? Math.min(height, 250) : height;
+
+  const defaultOptions = getCommonOptions('bar', isMobile);
   const mergedOptions = { ...defaultOptions, ...options };
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
+    <div className={cn('w-full touch-manipulation', className)} style={{ height: mobileHeight }}>
       <Bar data={data} options={mergedOptions} />
     </div>
   );
 }
 
 // Doughnut Chart Component
-export function DoughnutChart({ data, options, className, height = 300 }: BaseChartProps) {
-  const defaultOptions = getCommonOptions('doughnut');
+export function DoughnutChart({ data, options, className, height = 300, isMobile: propIsMobile }: BaseChartProps) {
+  const detectedIsMobile = useIsMobile();
+  const isMobile = propIsMobile ?? detectedIsMobile;
+  const mobileHeight = isMobile ? Math.min(height, 220) : height;
+
+  const defaultOptions = getCommonOptions('doughnut', isMobile);
   const mergedOptions = {
     ...defaultOptions,
-    cutout: '60%',
+    cutout: isMobile ? '55%' : '60%',
     plugins: {
       ...defaultOptions.plugins,
       legend: {
         ...defaultOptions.plugins?.legend,
-        position: 'right' as const
+        position: isMobile ? 'bottom' : 'right' as const
       }
     },
     ...options
   };
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
+    <div className={cn('w-full touch-manipulation', className)} style={{ height: mobileHeight }}>
       <Doughnut data={data} options={mergedOptions} />
     </div>
   );
 }
 
 // Pie Chart Component
-export function PieChart({ data, options, className, height = 300 }: BaseChartProps) {
-  const defaultOptions = getCommonOptions('pie');
+export function PieChart({ data, options, className, height = 300, isMobile: propIsMobile }: BaseChartProps) {
+  const detectedIsMobile = useIsMobile();
+  const isMobile = propIsMobile ?? detectedIsMobile;
+  const mobileHeight = isMobile ? Math.min(height, 220) : height;
+
+  const defaultOptions = getCommonOptions('pie', isMobile);
   const mergedOptions = { ...defaultOptions, ...options };
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
+    <div className={cn('w-full touch-manipulation', className)} style={{ height: mobileHeight }}>
       <Pie data={data} options={mergedOptions} />
     </div>
   );

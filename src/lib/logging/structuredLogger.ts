@@ -297,6 +297,12 @@ export class StructuredLogger {
       return;
     }
 
+    // Only enable file logging on server-side (Node.js environment)
+    if (typeof window !== 'undefined') {
+      // Client-side: skip file logging
+      return;
+    }
+
     // In a real implementation, you would:
     // 1. Use a proper file system library with rotation
     // 2. Handle file size limits and archival

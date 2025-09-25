@@ -32,7 +32,7 @@
     "test:ci": "jest --coverage --watchAll=false && playwright test",
     "coverage:open": "open coverage/lcov-report/index.html",
     "coverage:serve": "npx http-server coverage/lcov-report -p 8080 -o",
-    "playwright:install": "playwright install",
+    "playwright:install": "playwright install --with-deps || echo 'Playwright install skipped'",
     "playwright:install-deps": "playwright install-deps",
     "pretest:e2e": "npm run build",
     "deploy": "vercel --prod",
@@ -54,8 +54,7 @@
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "clean:all": "npm run clean && rm -rf node_modules && npm install",
     "postinstall": "npm run playwright:install || true",
-    "prepare": "husky install || true",
-    "playwright:install": "playwright install --with-deps || echo 'Playwright install skipped'"
+    "prepare": "husky install || true"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
@@ -69,6 +68,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "framer-motion": "^12.23.19",
     "graphql": "^16.9.0",
     "graphql-tag": "^2.12.6",
     "jsonwebtoken": "^9.0.2",
@@ -79,6 +79,7 @@
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",
+    "swr": "^2.3.6",
     "tailwind-merge": "^2.5.2",
     "zod": "^3.23.8"
   },

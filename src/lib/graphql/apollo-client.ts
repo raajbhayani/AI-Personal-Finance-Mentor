@@ -8,7 +8,8 @@ const httpLink = createHttpLink({
 
 const authLink = setContext((_, { headers }) => {
   // Get the authentication token from local storage if it exists
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = typeof window !== 'undefined' ?
+    localStorage.getItem('authToken') || sessionStorage.getItem('authToken') : null;
 
   return {
     headers: {
@@ -34,7 +35,8 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
     if ('statusCode' in networkError && networkError.statusCode === 401) {
       // Remove invalid token
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
         window.location.href = '/login';
       }
     }

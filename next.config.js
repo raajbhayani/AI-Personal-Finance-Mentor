@@ -5,7 +5,7 @@ const nextConfig = {
 
   // Performance optimizations
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // Disabled due to missing critters dependency
     optimizePackageImports: [
       'lucide-react',
       'chart.js',
@@ -51,7 +51,7 @@ const nextConfig = {
           },
           {
             key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
+            value: 'origin-when-cross-origin',
           },
           {
             key: 'Permissions-Policy',
@@ -64,7 +64,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            value: 'no-store, max-age=0',
           },
         ],
       },
@@ -78,44 +78,22 @@ const nextConfig = {
         ],
       },
       {
-        source: '/images/(.*)',
+        source: '/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/images/:path*',
         headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=86400, s-maxage=86400',
           },
         ],
-      },
-    ];
-  },
-
-  // Redirects for SEO
-  async redirects() {
-    return [
-      {
-        source: '/home',
-        destination: '/',
-        permanent: true,
-      },
-      {
-        source: '/signin',
-        destination: '/login',
-        permanent: true,
-      },
-      {
-        source: '/signup',
-        destination: '/register',
-        permanent: true,
-      },
-    ];
-  },
-
-  // Rewrites for API versioning
-  async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: '/api/:path*',
       },
     ];
   },
@@ -167,249 +145,46 @@ const nextConfig = {
             chunks: 'all',
             priority: 25,
           },
-          // Common utilities
-          utils: {
-            test: /[\\/]src[\\/](lib|utils)[\\/]/,
-            name: 'utils',
-            chunks: 'all',
-            priority: 15,
-            minChunks: 2,
-          },
         },
       };
     }
 
-    // Resolve alias for imports and fix React hooks issue
+    // Resolve alias for utils
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': require('path').resolve(__dirname, 'src'),
-      '@/components': require('path').resolve(__dirname, 'src/components'),
-      '@/lib': require('path').resolve(__dirname, 'src/lib'),
-      '@/hooks': require('path').resolve(__dirname, 'src/hooks'),
-      '@/utils': require('path').resolve(__dirname, 'src/utils'),
-      '@/styles': require('path').resolve(__dirname, 'src/styles'),
-      // Fix React hooks issue by ensuring single React instance
-      'react': require('path').resolve(__dirname, 'node_modules/react'),
-      'react-dom': require('path').resolve(__dirname, 'node_modules/react-dom'),
     };
-
-    // Tree shaking optimizations
-    if (!dev) {
-      config.optimization = {
-        ...config.optimization,
-        sideEffects: false,
-      };
-    }
 
     return config;
   },
 
-  // Compiler options
-  compiler: {
-    // Remove console logs in production
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+  // Compression
+  compress: true,
+
+  // Output
+  output: 'standalone',
+  trailingSlash: false,
+
+  // Redirects
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/',
+        permanent: false,
+      },
+    ];
   },
 
-  // Output configuration
-  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
-
-  // TypeScript configuration
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-
-  // ESLint configuration
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-
-  // Environment variables
+  // Environment variables to expose to client
   env: {
+    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'Finance Mentor',
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV || 'development',
     CUSTOM_KEY: process.env.CUSTOM_KEY || 'default',
     BUILD_ID: process.env.BUILD_ID || 'local',
   },
-
-  // PWA configuration (if using next-pwa)
-  ...(process.env.NODE_ENV === 'production' && {
-    pwa: {
-      dest: 'public',
-      register: true,
-      skipWaiting: true,
-      sw: 'sw.js',
-      buildExcludes: [/middleware-manifest\.json$/],
-      runtimeCaching: [
-        {
-          urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'google-fonts-cache',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-            },
-            cacheableResponse: {
-              statuses: [0, 200],
-            },
-          },
-        },
-        {
-          urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'gstatic-fonts-cache',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-            },
-            cacheableResponse: {
-              statuses: [0, 200],
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'static-font-assets',
-            expiration: {
-              maxEntries: 4,
-              maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'static-image-assets',
-            expiration: {
-              maxEntries: 64,
-              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\/_next\/image\?url=.+$/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'next-image',
-            expiration: {
-              maxEntries: 64,
-              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:mp4|webm)$/i,
-          handler: 'CacheFirst',
-          options: {
-            rangeRequests: true,
-            cacheName: 'static-video-assets',
-            expiration: {
-              maxEntries: 32,
-              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:js)$/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'static-js-assets',
-            expiration: {
-              maxEntries: 32,
-              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:css|less)$/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'static-style-assets',
-            expiration: {
-              maxEntries: 32,
-              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\/_next\/data\/.+\/.+\.json$/i,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'next-data',
-            expiration: {
-              maxEntries: 32,
-              maxAgeSeconds: 60 * 60 * 24, // 24 hours
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:json|xml|csv)$/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'static-data-assets',
-            expiration: {
-              maxEntries: 32,
-              maxAgeSeconds: 60 * 60 * 24, // 24 hours
-            },
-          },
-        },
-        {
-          urlPattern: ({ url }) => {
-            const isSameOrigin = self.origin === url.origin;
-            if (!isSameOrigin) return false;
-            const pathname = url.pathname;
-            return !pathname.startsWith('/api/auth/') && pathname.startsWith('/api/');
-          },
-          handler: 'NetworkFirst',
-          method: 'GET',
-          options: {
-            cacheName: 'apis',
-            expiration: {
-              maxEntries: 16,
-              maxAgeSeconds: 60 * 60 * 24, // 24 hours
-            },
-            networkTimeoutSeconds: 10,
-          },
-        },
-        {
-          urlPattern: ({ url }) => {
-            const isSameOrigin = self.origin === url.origin;
-            if (!isSameOrigin) return false;
-            const pathname = url.pathname;
-            return pathname.startsWith('/');
-          },
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'others',
-            expiration: {
-              maxEntries: 32,
-              maxAgeSeconds: 60 * 60 * 24, // 24 hours
-            },
-            networkTimeoutSeconds: 10,
-          },
-        },
-      ],
-    },
-  }),
 };
 
-// Apply PWA plugin if in production and next-pwa is available
-if (process.env.NODE_ENV === 'production') {
-  try {
-    const withPWA = require('next-pwa')({
-      dest: 'public',
-      register: true,
-      skipWaiting: true,
-    });
-    module.exports = withPWA(nextConfig);
-  } catch (error) {
-    console.warn('next-pwa not found, PWA features disabled');
-    module.exports = nextConfig;
-  }
-} else {
-  module.exports = nextConfig;
-}
+// Export config
+module.exports = nextConfig;

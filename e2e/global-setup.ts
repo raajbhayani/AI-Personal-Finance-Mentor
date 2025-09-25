@@ -27,7 +27,7 @@ async function globalSetup(config: FullConfig) {
   (global as any).__E2E_MONGOD__ = mongod;
 
   // Set environment variables for E2E tests
-  process.env.NODE_ENV = 'test';
+  // process.env.NODE_ENV = 'test'; // NODE_ENV is read-only in some environments
   process.env.MONGODB_URI = uri;
   process.env.JWT_SECRET = 'e2e-test-jwt-secret';
   process.env.JWT_REFRESH_SECRET = 'e2e-test-jwt-refresh-secret';

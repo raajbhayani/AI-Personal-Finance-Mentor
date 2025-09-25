@@ -1,14 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { connectDB } from '../../../lib/db/mongodb';
 import { authMiddleware } from '../../../lib/middleware/auth';
-import { validateRequestBody, validateQueryParams } from '../../../lib/middleware/validation';
+import { withApiProtection, sanitizeObject } from '../../../lib/middleware/apiValidation';
 import { Transaction } from '../../../models/Transaction';
 import {
-  CreateTransactionSchema,
-  TransactionQuerySchema,
-  type CreateTransactionInput,
-  type TransactionQuery,
-} from '../../../lib/validation/transaction';
+  createTransactionSchema,
+  type CreateTransactionData,
+} from '../../../lib/validation/schemas';
 
 interface AuthenticatedRequest extends NextApiRequest {
   user: {
@@ -120,40 +118,86 @@ async function handleGetTransactions(req: AuthenticatedRequest, res: NextApiResp
   }
 }
 
-async function handleCreateTransaction(req: AuthenticatedRequest, res: NextApiResponse) {
+const handleCreateTransaction = withApiProtection(createTransactionSchema, {
+  rateLimit: { maxRequests: 50, windowMs: 15 * 60 * 1000 }, // 50 requests per 15 minutes
+  requireCSRF: true,
+})(async (req: AuthenticatedRequest, res: NextApiResponse, validatedData: CreateTransactionData) => {
   try {
-    const validation = validateRequestBody(CreateTransactionSchema, req.body);
+    await connectDB();
 
-    if (!validation.success) {
+    // Sanitize input data
+    const sanitizedData = sanitizeObject(validatedData);
+    const userId = req.user.userId;
+
+    // Additional business logic validation
+    if (sanitizedData.amount > 1000000) {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors: validation.errors,
+        message: 'Transaction amount exceeds maximum limit',
+        errors: [{ field: 'amount', message: 'Amount cannot exceed $1,000,000' }],
       });
     }
 
-    const transactionData = validation.data as CreateTransactionInput;
-    const userId = req.user.userId;
-
-    const transaction = new Transaction({
-      ...transactionData,
+    // Check for duplicate transactions (same amount, description, and date within 1 minute)
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    const duplicateTransaction = await Transaction.findOne({
       userId,
+      amount: sanitizedData.amount,
+      description: sanitizedData.description,
+      date: { $gte: oneMinuteAgo },
+    });
+
+    if (duplicateTransaction) {
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate transaction detected',
+        errors: [{ field: 'general', message: 'A similar transaction was created recently' }],
+      });
+    }
+
+    // Create transaction
+    const transaction = new Transaction({
+      ...sanitizedData,
+      userId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     await transaction.save();
 
+    // Log transaction creation for audit
+    console.log(`Transaction created: ${transaction._id} by user ${userId}`);
+
     return res.status(201).json({
       success: true,
       message: 'Transaction created successfully',
-      data: transaction,
+      data: {
+        id: transaction._id,
+        ...sanitizedData,
+        createdAt: transaction.createdAt,
+      },
     });
   } catch (error) {
     console.error('Create transaction error:', error);
+
+    // Handle specific database errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Database validation failed',
+        errors: Object.keys(error.errors).map(key => ({
+          field: key,
+          message: error.errors[key].message,
+        })),
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: 'Failed to create transaction',
+      errors: [{ field: 'general', message: 'Internal server error' }],
     });
   }
-}
+});
 
 export default authMiddleware(handler);

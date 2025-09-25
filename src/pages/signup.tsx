@@ -2,160 +2,79 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { User, Mail, Lock, DollarSign, ArrowRight, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import Button from '@/components/ui/Button';
-import Alert from '@/components/ui/Alert';
-import PasswordStrengthIndicator from '@/components/ui/PasswordStrengthIndicator';
-import {
-  validateEmail,
-  validatePassword,
-  validateConfirmPassword,
-  validateName,
-} from '@/lib/utils/validation';
-
-interface SignupForm {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-interface SignupFormErrors {
-  name?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  general?: string;
-}
+import { User, Mail, Lock, DollarSign, ArrowRight, CheckCircle } from 'lucide-react';
+import { signupSchema, type SignupFormData } from '@/lib/validation/schemas';
+import { useFormValidation } from '@/lib/hooks/useFormValidation';
+import { InputField } from '@/components/ui/FormField';
+import ValidationFeedback, { FormValidationSummary, PasswordStrength } from '@/components/ui/ValidationFeedback';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<SignupForm>({
-    name: '',
+  const { signup, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [serverError, setServerError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const {
+    values,
+    setValue,
+    isValid,
+    errors,
+    isSubmitting,
+    handleSubmit,
+    setError,
+    clearErrors,
+    getFieldProps,
+  } = useFormValidation(signupSchema, {
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    acceptTerms: false,
+  }, {
+    validateOnChange: true,
+    validateOnBlur: true,
+    debounceDelay: 300,
   });
-
-  const [errors, setErrors] = useState<SignupFormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [subscribeNewsletter, setSubscribeNewsletter] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Check if user is already authenticated
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      router.push('/dashboard');
+    if (isAuthenticated && !authLoading) {
+      const redirectTo = (router.query.redirect as string) || '/dashboard';
+      router.push(redirectTo);
     }
-  }, [router]);
+  }, [isAuthenticated, authLoading, router]);
 
-  const handleInputChange = (field: keyof SignupForm) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = e.target.value;
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Clear field error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: SignupFormErrors = {};
-
-    // Validate name
-    const nameError = validateName(formData.name);
-    if (nameError) {
-      newErrors.name = nameError;
-    }
-
-    // Validate email
-    const emailError = validateEmail(formData.email);
-    if (emailError) {
-      newErrors.email = emailError;
-    }
-
-    // Validate password
-    const passwordError = validatePassword(formData.password);
-    if (passwordError) {
-      newErrors.password = passwordError;
-    }
-
-    // Validate confirm password
-    const confirmPasswordError = validateConfirmPassword(formData.password, formData.confirmPassword);
-    if (confirmPasswordError) {
-      newErrors.confirmPassword = confirmPasswordError;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    if (!agreeToTerms) {
-      setErrors({ general: 'Please agree to the Terms of Service and Privacy Policy to continue.' });
-      return;
-    }
-
-    setIsLoading(true);
-    setErrors({});
+  const onSubmit = async (formData: SignupFormData) => {
+    setServerError('');
+    setSuccessMessage('');
+    clearErrors();
 
     try {
-      // Call your signup API
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          subscribeNewsletter,
-        }),
+      await signup({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        currency: 'USD'
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Signup failed');
-      }
-
-      // Show success state
+      setSuccessMessage('Account created successfully! Please check your email to verify your account.');
       setShowSuccess(true);
 
-      // Redirect to login after delay
+      // Redirect after a short delay
       setTimeout(() => {
-        router.push('/login?message=Account created successfully. Please sign in.');
+        const redirectTo = (router.query.redirect as string) || '/dashboard';
+        router.push(redirectTo);
       }, 3000);
-
     } catch (error) {
       console.error('Signup error:', error);
-      setErrors({
-        general: error instanceof Error ? error.message : 'Something went wrong. Please try again later.'
-      });
-    } finally {
-      setIsLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create account. Please try again.';
+      setServerError(errorMessage);
+      setError('general', errorMessage);
     }
-  };
-
-  const togglePassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleConfirmPassword = () => {
-    setShowConfirmPassword(!showConfirmPassword);
   };
 
   if (showSuccess) {
@@ -228,214 +147,140 @@ export default function SignupPage() {
 
           {/* Signup Card */}
           <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-white/20 p-8 space-y-6">
-            {/* Error Alert */}
-            {errors.general && (
-              <Alert variant="error" dismissible onDismiss={() => setErrors({ ...errors, general: undefined })}>
-                {errors.general}
-              </Alert>
+            {/* Success Message */}
+            {successMessage && (
+              <ValidationFeedback
+                type="success"
+                message={successMessage}
+                onDismiss={() => setSuccessMessage('')}
+                dismissible
+              />
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name Input */}
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleInputChange('name')}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
-                      errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                    }`}
-                    placeholder="Enter your full name"
-                    required
-                    autoComplete="name"
-                    disabled={isLoading}
-                  />
-                </div>
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                )}
+            {/* Server Error */}
+            {serverError && (
+              <ValidationFeedback
+                type="error"
+                message={serverError}
+                onDismiss={() => setServerError('')}
+                dismissible
+              />
+            )}
+
+            {/* Form Validation Summary */}
+            <FormValidationSummary
+              errors={errors}
+              onDismiss={clearErrors}
+            />
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit); }} className="space-y-6">
+              {/* Name Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField
+                  label="First name"
+                  type="text"
+                  required
+                  placeholder="Enter your first name"
+                  autoComplete="given-name"
+                  leftIcon={<User className="h-5 w-5" />}
+                  disabled={isSubmitting || authLoading}
+                  {...getFieldProps('firstName')}
+                />
+
+                <InputField
+                  label="Last name"
+                  type="text"
+                  required
+                  placeholder="Enter your last name"
+                  autoComplete="family-name"
+                  leftIcon={<User className="h-5 w-5" />}
+                  disabled={isSubmitting || authLoading}
+                  {...getFieldProps('lastName')}
+                />
               </div>
 
               {/* Email Input */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange('email')}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
-                      errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                    }`}
-                    placeholder="Enter your email"
-                    required
-                    autoComplete="email"
-                    disabled={isLoading}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                )}
-              </div>
+              <InputField
+                label="Email address"
+                type="email"
+                required
+                placeholder="Enter your email address"
+                autoComplete="email"
+                leftIcon={<Mail className="h-5 w-5" />}
+                disabled={isSubmitting || authLoading}
+                {...getFieldProps('email')}
+              />
 
               {/* Password Input */}
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={handleInputChange('password')}
-                      className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
-                        errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                      }`}
-                      placeholder="Create a password"
-                      required
-                      autoComplete="new-password"
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={togglePassword}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      disabled={isLoading}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-                  )}
-                </div>
+              <InputField
+                label="Password"
+                type="password"
+                required
+                placeholder="Create a strong password"
+                autoComplete="new-password"
+                leftIcon={<Lock className="h-5 w-5" />}
+                showPasswordToggle
+                disabled={isSubmitting || authLoading}
+                {...getFieldProps('password')}
+              />
 
-                {/* Password Strength Indicator */}
-                {formData.password && (
-                  <PasswordStrengthIndicator
-                    password={formData.password}
-                    showDetails={true}
-                  />
-                )}
-              </div>
+              {/* Password Strength Indicator */}
+              {values.password && (
+                <PasswordStrength password={values.password} />
+              )}
 
               {/* Confirm Password Input */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange('confirmPassword')}
-                    className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
-                      errors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                    }`}
-                    placeholder="Confirm your password"
-                    required
-                    autoComplete="new-password"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleConfirmPassword}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    disabled={isLoading}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-                )}
-              </div>
+              <InputField
+                label="Confirm password"
+                type="password"
+                required
+                placeholder="Confirm your password"
+                autoComplete="new-password"
+                leftIcon={<Lock className="h-5 w-5" />}
+                showPasswordToggle
+                disabled={isSubmitting || authLoading}
+                {...getFieldProps('confirmPassword')}
+              />
 
-              {/* Terms Agreement */}
+              {/* Terms and Conditions */}
               <div className="space-y-4">
                 <label className="flex items-start space-x-3">
                   <input
                     type="checkbox"
-                    checked={agreeToTerms}
-                    onChange={(e) => setAgreeToTerms(e.target.checked)}
-                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200"
-                    disabled={isLoading}
+                    checked={values.acceptTerms}
+                    onChange={(e) => setValue('acceptTerms', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200 touch-manipulation mt-1"
+                    disabled={isSubmitting || authLoading}
                     required
                   />
                   <span className="text-sm text-gray-600 leading-relaxed">
                     I agree to the{' '}
-                    <Link
-                      href="/terms"
-                      className="text-blue-600 hover:text-blue-500 transition-colors duration-200 focus:outline-none focus:underline"
-                      target="_blank"
-                    >
+                    <Link href="/terms" className="text-blue-600 hover:text-blue-500 transition-colors duration-200">
                       Terms of Service
                     </Link>{' '}
                     and{' '}
-                    <Link
-                      href="/privacy"
-                      className="text-blue-600 hover:text-blue-500 transition-colors duration-200 focus:outline-none focus:underline"
-                      target="_blank"
-                    >
+                    <Link href="/privacy" className="text-blue-600 hover:text-blue-500 transition-colors duration-200">
                       Privacy Policy
                     </Link>
                   </span>
                 </label>
 
-                <label className="flex items-start space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={subscribeNewsletter}
-                    onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200"
-                    disabled={isLoading}
+                {errors.acceptTerms && (
+                  <ValidationFeedback
+                    type="error"
+                    message={errors.acceptTerms}
+                    size="sm"
                   />
-                  <span className="text-sm text-gray-600 leading-relaxed">
-                    Subscribe to our newsletter for financial tips and product updates
-                  </span>
-                </label>
+                )}
               </div>
 
               {/* Submit Button */}
-              <Button
+              <button
                 type="submit"
-                size="lg"
-                loading={isLoading}
-                disabled={isLoading || !agreeToTerms}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                disabled={isSubmitting || authLoading || !isValid}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-4 sm:py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base min-h-[52px]"
               >
-                {isLoading ? (
+                {isSubmitting || authLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                     Creating account...
@@ -446,7 +291,7 @@ export default function SignupPage() {
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </div>
                 )}
-              </Button>
+              </button>
             </form>
 
             {/* Divider */}

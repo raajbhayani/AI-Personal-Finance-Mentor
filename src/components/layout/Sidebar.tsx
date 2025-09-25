@@ -19,6 +19,8 @@ import {
   Users,
   MessageCircle,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
 import { cn } from '../../lib/utils/cn';
 
 interface SidebarItem {
@@ -52,6 +54,35 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { logout } = useAuth();
+  const { addNotification } = useNotification();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      addNotification({
+        type: 'success',
+        title: 'Logged Out',
+        message: 'You have been successfully logged out.',
+        duration: 3000
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Logout Error',
+        message: 'Failed to log out. Please try again.',
+        duration: 5000
+      });
+    }
+  };
+
+  // Enhanced active route checking
+  const isRouteActive = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard' || pathname === '/';
+    }
+    return pathname.startsWith(href);
+  };
 
   return (
     <>
@@ -94,7 +125,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = isRouteActive(item.href);
 
               return (
                 <Link
@@ -103,8 +134,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   className={cn(
                     'flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group relative',
                     isActive
-                      ? 'bg-gradient-to-r from-blue-50 to-emerald-50 text-blue-700 border-r-2 border-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-blue-700'
+                      ? 'bg-gradient-to-r from-blue-50 to-emerald-50 text-blue-700 border-r-4 border-blue-600 shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-blue-700 hover:border-r-2 hover:border-blue-300'
                   )}
                   onClick={() => {
                     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -128,7 +159,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <div className="border-t border-gray-200 p-4 space-y-2">
             {bottomItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = isRouteActive(item.href);
 
               return (
                 <Link
@@ -147,7 +178,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               );
             })}
 
-            <button className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 group">
+            <button
+              onClick={handleLogout}
+              className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 group"
+            >
               <LogOut className="h-5 w-5 mr-3 text-red-500" />
               Sign Out
             </button>

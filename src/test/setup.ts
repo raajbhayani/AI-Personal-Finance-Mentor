@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import React from 'react';
 
 // Extend Jest matchers
 import 'jest-extended';
@@ -284,10 +285,10 @@ jest.mock('chart.js', () => ({
 
 // Mock react-chartjs-2
 jest.mock('react-chartjs-2', () => ({
-  Bar: () => <div data-testid="bar-chart" />,
-  Line: () => <div data-testid="line-chart" />,
-  Pie: () => <div data-testid="pie-chart" />,
-  Doughnut: () => <div data-testid="doughnut-chart" />,
+  Bar: () => ({ type: 'div', props: { 'data-testid': 'bar-chart' } }),
+  Line: () => ({ type: 'div', props: { 'data-testid': 'line-chart' } }),
+  Pie: () => ({ type: 'div', props: { 'data-testid': 'pie-chart' } }),
+  Doughnut: () => ({ type: 'div', props: { 'data-testid': 'doughnut-chart' } }),
 }));
 
 // Global test helpers

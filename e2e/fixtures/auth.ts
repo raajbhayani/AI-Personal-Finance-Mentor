@@ -169,7 +169,9 @@ export async function verifyPageTitle(page: Page, expectedTitle: string) {
 // Helper function to simulate mobile device
 export async function simulateMobileDevice(page: Page) {
   await page.setViewportSize({ width: 375, height: 667 });
-  await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15');
+  await page.setExtraHTTPHeaders({
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15'
+  });
 }
 
 // Helper function to simulate slow network

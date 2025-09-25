@@ -42,10 +42,16 @@ export default function IncomeExpenseChart({
     }).format(amount);
   };
 
-  // Calculate chart dimensions and scales
-  const chartWidth = 600;
-  const chartHeight = 300;
-  const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+  // Calculate chart dimensions and scales - responsive sizing
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const chartWidth = isMobile ? 320 : 600;
+  const chartHeight = isMobile ? 240 : 300;
+  const padding = {
+    top: 20,
+    right: isMobile ? 10 : 20,
+    bottom: 40,
+    left: isMobile ? 40 : 60
+  };
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
@@ -114,7 +120,7 @@ export default function IncomeExpenseChart({
       </CardHeader>
       <CardContent>
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="text-center p-4 bg-emerald-50 rounded-lg">
             <div className="flex items-center justify-center mb-2">
               <TrendingUp className="h-5 w-5 text-emerald-600 mr-2" />
@@ -144,8 +150,8 @@ export default function IncomeExpenseChart({
         </div>
 
         {/* Chart */}
-        <div className="relative bg-gray-50 rounded-lg p-4">
-          <svg width={chartWidth} height={chartHeight} className="w-full">
+        <div className="relative bg-gray-50 rounded-lg p-2 sm:p-4 overflow-x-auto">
+          <svg width={chartWidth} height={chartHeight} className="w-full min-w-[320px]">
             <defs>
               <linearGradient id="incomeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" style={{ stopColor: '#10B981', stopOpacity: 0.3 }} />
@@ -203,24 +209,28 @@ export default function IncomeExpenseChart({
                   <circle
                     cx={xScale(index)}
                     cy={yScale(point.income)}
-                    r={activePoint === index ? 6 : 4}
+                    r={activePoint === index ? 8 : 6}
                     fill="#10B981"
                     stroke="white"
                     strokeWidth={2}
-                    className="cursor-pointer transition-all duration-200"
+                    className="cursor-pointer transition-all duration-200 touch-manipulation"
                     onMouseEnter={() => setActivePoint(index)}
                     onMouseLeave={() => setActivePoint(null)}
+                    onTouchStart={() => setActivePoint(index)}
+                    onTouchEnd={() => setTimeout(() => setActivePoint(null), 2000)}
                   />
                   <circle
                     cx={xScale(index)}
                     cy={yScale(point.expenses)}
-                    r={activePoint === index ? 6 : 4}
+                    r={activePoint === index ? 8 : 6}
                     fill="#EF4444"
                     stroke="white"
                     strokeWidth={2}
-                    className="cursor-pointer transition-all duration-200"
+                    className="cursor-pointer transition-all duration-200 touch-manipulation"
                     onMouseEnter={() => setActivePoint(index)}
                     onMouseLeave={() => setActivePoint(null)}
+                    onTouchStart={() => setActivePoint(index)}
+                    onTouchEnd={() => setTimeout(() => setActivePoint(null), 2000)}
                   />
                 </g>
               ))}
@@ -259,7 +269,7 @@ export default function IncomeExpenseChart({
 
           {/* Tooltip */}
           {activePoint !== null && (
-            <div className="absolute top-4 right-4 bg-white shadow-lg rounded-lg p-3 border">
+            <div className="absolute top-4 right-4 left-4 sm:left-auto bg-white shadow-lg rounded-lg p-3 border max-w-xs sm:max-w-none z-10">
               <div className="text-sm font-medium text-gray-900 mb-2">
                 {data[activePoint].month}
               </div>

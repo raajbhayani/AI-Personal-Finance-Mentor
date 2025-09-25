@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Sidebar from '../layout/Sidebar';
 import Header from '../layout/Header';
+import MobileBottomNav, { MobileMenuOverlay } from '../navigation/MobileBottomNav';
 import BalanceOverview from './BalanceOverview';
 import RecentTransactions from './RecentTransactions';
 import ExpenseChart from './ExpenseChart';
@@ -27,6 +28,7 @@ export default function Dashboard({
   onRetry
 }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSidebarToggle = () => {
     setSidebarOpen(!sidebarOpen);
@@ -67,7 +69,7 @@ export default function Dashboard({
         />
 
         {/* Dashboard Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 pb-20 lg:pb-6">
           {/* Error State */}
           {error && (
             <div className="max-w-7xl mx-auto mb-6">
@@ -132,8 +134,8 @@ export default function Dashboard({
               </div>
             </div>
 
-            {/* Quick Actions Bar */}
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            {/* Quick Actions Bar - Hidden on mobile (bottom nav replaces it) */}
+            <section className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <button
@@ -186,6 +188,15 @@ export default function Dashboard({
           )}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav onMenuPress={() => setMobileMenuOpen(true)} />
+
+      {/* Mobile Menu Overlay */}
+      <MobileMenuOverlay
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+      />
     </div>
   );
 }

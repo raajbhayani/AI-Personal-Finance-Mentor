@@ -1,0 +1,401 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+
+  // Performance optimizations
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: [
+      'lucide-react',
+      'chart.js',
+      'react-chartjs-2',
+      'date-fns',
+    ],
+  },
+
+  // Image optimization
+  images: {
+    domains: [
+      'localhost',
+      'financeapp.com',
+      'cdn.financeapp.com',
+      'images.unsplash.com',
+      'via.placeholder.com',
+    ],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+
+  // Headers for security and performance
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=86400',
+          },
+        ],
+      },
+    ];
+  },
+
+  // Redirects for SEO
+  async redirects() {
+    return [
+      {
+        source: '/home',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/signin',
+        destination: '/login',
+        permanent: true,
+      },
+      {
+        source: '/signup',
+        destination: '/register',
+        permanent: true,
+      },
+    ];
+  },
+
+  // Rewrites for API versioning
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: '/api/:path*',
+      },
+    ];
+  },
+
+  // Bundle analyzer
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Bundle analyzer in development
+    if (process.env.ANALYZE === 'true') {
+      const BundleAnalyzerPlugin = require('@next/bundle-analyzer')({
+        enabled: true,
+      });
+      config.plugins.push(new BundleAnalyzerPlugin());
+    }
+
+    // Optimize bundle splitting
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks.cacheGroups,
+          // Vendor chunks
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 10,
+            maxSize: 244000, // 244KB
+          },
+          // UI components chunk
+          ui: {
+            test: /[\\/]src[\\/]components[\\/]/,
+            name: 'ui-components',
+            chunks: 'all',
+            priority: 20,
+            minChunks: 2,
+            maxSize: 200000, // 200KB
+          },
+          // Chart libraries chunk
+          charts: {
+            test: /[\\/]node_modules[\\/](chart\.js|react-chartjs-2)[\\/]/,
+            name: 'charts',
+            chunks: 'all',
+            priority: 30,
+          },
+          // Date utilities chunk
+          dateUtils: {
+            test: /[\\/]node_modules[\\/](date-fns)[\\/]/,
+            name: 'date-utils',
+            chunks: 'all',
+            priority: 25,
+          },
+          // Common utilities
+          utils: {
+            test: /[\\/]src[\\/](lib|utils)[\\/]/,
+            name: 'utils',
+            chunks: 'all',
+            priority: 15,
+            minChunks: 2,
+          },
+        },
+      };
+    }
+
+    // Resolve alias for imports and fix React hooks issue
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+      '@/components': require('path').resolve(__dirname, 'src/components'),
+      '@/lib': require('path').resolve(__dirname, 'src/lib'),
+      '@/hooks': require('path').resolve(__dirname, 'src/hooks'),
+      '@/utils': require('path').resolve(__dirname, 'src/utils'),
+      '@/styles': require('path').resolve(__dirname, 'src/styles'),
+      // Fix React hooks issue by ensuring single React instance
+      'react': require('path').resolve(__dirname, 'node_modules/react'),
+      'react-dom': require('path').resolve(__dirname, 'node_modules/react-dom'),
+    };
+
+    // Tree shaking optimizations
+    if (!dev) {
+      config.optimization = {
+        ...config.optimization,
+        sideEffects: false,
+      };
+    }
+
+    return config;
+  },
+
+  // Compiler options
+  compiler: {
+    // Remove console logs in production
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+
+  // Output configuration
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+
+  // TypeScript configuration
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
+  // ESLint configuration
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+
+  // Environment variables
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY || 'default',
+    BUILD_ID: process.env.BUILD_ID || 'local',
+  },
+
+  // PWA configuration disabled - next-pwa not installed
+  // ...(process.env.NODE_ENV === 'production' && {
+  //   pwa: {
+      dest: 'public',
+      register: true,
+      skipWaiting: true,
+      sw: 'sw.js',
+      buildExcludes: [/middleware-manifest\.json$/],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'google-fonts-cache',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'gstatic-fonts-cache',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        {
+          urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-font-assets',
+            expiration: {
+              maxEntries: 4,
+              maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
+            },
+          },
+        },
+        {
+          urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-image-assets',
+            expiration: {
+              maxEntries: 64,
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+        {
+          urlPattern: /\/_next\/image\?url=.+$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'next-image',
+            expiration: {
+              maxEntries: 64,
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+        {
+          urlPattern: /\.(?:mp4|webm)$/i,
+          handler: 'CacheFirst',
+          options: {
+            rangeRequests: true,
+            cacheName: 'static-video-assets',
+            expiration: {
+              maxEntries: 32,
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+        {
+          urlPattern: /\.(?:js)$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-js-assets',
+            expiration: {
+              maxEntries: 32,
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+        {
+          urlPattern: /\.(?:css|less)$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-style-assets',
+            expiration: {
+              maxEntries: 32,
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+        {
+          urlPattern: /\/_next\/data\/.+\/.+\.json$/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'next-data',
+            expiration: {
+              maxEntries: 32,
+              maxAgeSeconds: 60 * 60 * 24, // 24 hours
+            },
+          },
+        },
+        {
+          urlPattern: /\.(?:json|xml|csv)$/i,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'static-data-assets',
+            expiration: {
+              maxEntries: 32,
+              maxAgeSeconds: 60 * 60 * 24, // 24 hours
+            },
+          },
+        },
+        {
+          urlPattern: ({ url }) => {
+            const isSameOrigin = self.origin === url.origin;
+            if (!isSameOrigin) return false;
+            const pathname = url.pathname;
+            return !pathname.startsWith('/api/auth/') && pathname.startsWith('/api/');
+          },
+          handler: 'NetworkFirst',
+          method: 'GET',
+          options: {
+            cacheName: 'apis',
+            expiration: {
+              maxEntries: 16,
+              maxAgeSeconds: 60 * 60 * 24, // 24 hours
+            },
+            networkTimeoutSeconds: 10,
+          },
+        },
+        {
+          urlPattern: ({ url }) => {
+            const isSameOrigin = self.origin === url.origin;
+            if (!isSameOrigin) return false;
+            const pathname = url.pathname;
+            return pathname.startsWith('/');
+          },
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'others',
+            expiration: {
+              maxEntries: 32,
+              maxAgeSeconds: 60 * 60 * 24, // 24 hours
+            },
+            networkTimeoutSeconds: 10,
+          },
+        },
+      ],
+    // },
+  // }),
+};
+
+// Export config without PWA
+module.exports = nextConfig;

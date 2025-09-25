@@ -2,140 +2,81 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { Mail, Lock, DollarSign, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { validateEmail, validateField } from '@/lib/utils/validation';
-
-interface LoginForm {
-  email: string;
-  password: string;
-}
-
-interface LoginFormErrors {
-  email?: string;
-  password?: string;
-  general?: string;
-}
+import { Mail, Lock, DollarSign, ArrowRight } from 'lucide-react';
+import { loginSchema, type LoginFormData } from '@/lib/validation/schemas';
+import { useFormValidation } from '@/lib/hooks/useFormValidation';
+import { InputField } from '@/components/ui/FormField';
+import ValidationFeedback, { FormValidationSummary } from '@/components/ui/ValidationFeedback';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<LoginForm>({
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [serverError, setServerError] = useState<string>('');
+
+  const {
+    values,
+    setValue,
+    isValid,
+    errors,
+    isSubmitting,
+    handleSubmit,
+    setError,
+    clearErrors,
+    getFieldProps,
+  } = useFormValidation(loginSchema, {
     email: '',
     password: '',
+    rememberMe: false,
+  }, {
+    validateOnChange: true,
+    validateOnBlur: true,
+    debounceDelay: 300,
   });
-
-  const [errors, setErrors] = useState<LoginFormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   // Check if user is already authenticated
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      router.push('/dashboard');
+    if (isAuthenticated && !authLoading) {
+      const redirectTo = (router.query.redirect as string) || '/dashboard';
+      router.push(redirectTo);
     }
-  }, [router]);
+  }, [isAuthenticated, authLoading, router]);
 
   // Handle URL parameters for redirect
   useEffect(() => {
-    const { redirect, error, message } = router.query;
+    const { redirect, error, expired, message } = router.query;
 
     if (error) {
-      setErrors({ general: Array.isArray(error) ? error[0] : error });
+      let errorMessage = 'Login failed. Please try again.';
+      if (error === 'invalid') {
+        errorMessage = 'Your session is invalid. Please sign in again.';
+      }
+      setServerError(errorMessage);
+    }
+
+    if (expired) {
+      setServerError('Your session has expired. Please sign in again.');
     }
 
     if (message) {
-      // You could show a success message here if needed
       console.log('Message:', message);
     }
   }, [router.query]);
 
-  const handleInputChange = (field: keyof LoginForm) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = e.target.value;
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Clear field error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: LoginFormErrors = {};
-
-    // Validate email
-    const emailError = validateEmail(formData.email);
-    if (emailError) {
-      newErrors.email = emailError;
-    }
-
-    // Validate password
-    const passwordError = validateField(formData.password, { required: true });
-    if (passwordError) {
-      newErrors.password = passwordError;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    setErrors({});
+  const onSubmit = async (formData: LoginFormData) => {
+    setServerError('');
+    clearErrors();
 
     try {
-      // Call your authentication API
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          rememberMe,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Store auth token
-      if (data.token) {
-        if (rememberMe) {
-          localStorage.setItem('authToken', data.token);
-        } else {
-          sessionStorage.setItem('authToken', data.token);
-        }
-      }
-
-      // Redirect to intended page or dashboard
+      await login(formData.email, formData.password, formData.rememberMe);
       const redirectTo = (router.query.redirect as string) || '/dashboard';
       router.push(redirectTo);
-
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({
-        general: error instanceof Error ? error.message : 'Invalid email or password. Please try again.'
-      });
-    } finally {
-      setIsLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Invalid email or password. Please try again.';
+      setServerError(errorMessage);
+      setError('general', errorMessage);
     }
-  };
-
-  const togglePassword = () => {
-    setShowPassword(!showPassword);
   };
 
   return (
@@ -146,7 +87,7 @@ export default function LoginPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50 flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-4 -right-4 w-72 h-72 bg-gradient-to-r from-blue-400/10 to-emerald-400/10 rounded-full blur-3xl"></div>
@@ -173,100 +114,57 @@ export default function LoginPage() {
 
           {/* Login Card */}
           <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-white/20 p-8 space-y-6">
-            {/* Error Alert */}
-            {errors.general && (
-              <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-4">
-                <div className="flex items-center">
-                  <div className="text-red-500 mr-2">⚠</div>
-                  <div className="flex-1">{errors.general}</div>
-                  <button
-                    onClick={() => setErrors({ ...errors, general: undefined })}
-                    className="text-red-500 hover:text-red-700 ml-2"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
+            {/* Server Error */}
+            {serverError && (
+              <ValidationFeedback
+                type="error"
+                message={serverError}
+                onDismiss={() => setServerError('')}
+                dismissible
+              />
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Form Validation Summary */}
+            <FormValidationSummary
+              errors={errors}
+              onDismiss={clearErrors}
+            />
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit); }} className="space-y-6">
               {/* Email Input */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange('email')}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
-                      errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                    }`}
-                    placeholder="Enter your email"
-                    required
-                    autoComplete="email"
-                    disabled={isLoading}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                )}
-              </div>
+              <InputField
+                label="Email address"
+                type="email"
+                required
+                placeholder="Enter your email"
+                autoComplete="email"
+                leftIcon={<Mail className="h-5 w-5" />}
+                disabled={isSubmitting || authLoading}
+                {...getFieldProps('email')}
+              />
 
               {/* Password Input */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleInputChange('password')}
-                    className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${
-                      errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
-                    }`}
-                    placeholder="Enter your password"
-                    required
-                    autoComplete="current-password"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={togglePassword}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    disabled={isLoading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-                )}
-              </div>
+              <InputField
+                label="Password"
+                type="password"
+                required
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                leftIcon={<Lock className="h-5 w-5" />}
+                showPasswordToggle
+                disabled={isSubmitting || authLoading}
+                {...getFieldProps('password')}
+              />
 
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200"
-                    disabled={isLoading}
+                    checked={values.rememberMe}
+                    onChange={(e) => setValue('rememberMe', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200 touch-manipulation"
+                    disabled={isSubmitting || authLoading}
                   />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
@@ -282,10 +180,10 @@ export default function LoginPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || authLoading || !isValid}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-4 sm:py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base min-h-[52px]"
               >
-                {isLoading ? (
+                {isSubmitting || authLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                     Signing in...
@@ -313,8 +211,8 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                disabled={isLoading}
-                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading || authLoading}
+                className="flex items-center justify-center px-4 py-3 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-[0.98] min-h-[48px]"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -327,8 +225,8 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                disabled={isLoading}
-                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading || authLoading}
+                className="flex items-center justify-center px-4 py-3 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-[0.98] min-h-[48px]"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingDown, MoreHorizontal } from 'lucide-react';
 import Card, { CardContent, CardHeader, CardTitle } from '../ui/Card';
 
@@ -32,6 +32,18 @@ export default function ExpenseChart({
   totalExpenses = 6199.45,
 }: ExpenseChartProps) {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -42,12 +54,12 @@ export default function ExpenseChart({
     }).format(amount);
   };
 
-  // Calculate pie chart segments
+  // Calculate pie chart segments with mobile optimization
   const generatePieChart = () => {
     let currentAngle = 0;
-    const radius = 90;
-    const centerX = 120;
-    const centerY = 120;
+    const radius = isMobile ? 70 : 90;
+    const centerX = isMobile ? 100 : 120;
+    const centerY = isMobile ? 100 : 120;
 
     return categories.map((category) => {
       const startAngle = currentAngle;
@@ -97,20 +109,26 @@ export default function ExpenseChart({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col lg:flex-row items-center space-y-6 lg:space-y-0 lg:space-x-6">
+        <div className={`flex ${isMobile ? 'flex-col' : 'flex-col lg:flex-row'} items-center space-y-6 lg:space-y-0 lg:space-x-6`}>
           {/* Pie Chart */}
           <div className="relative flex-shrink-0">
-            <svg width="240" height="240" className="transform -rotate-90">
+            <svg
+              width={isMobile ? "200" : "240"}
+              height={isMobile ? "200" : "240"}
+              className="transform -rotate-90 touch-manipulation"
+            >
               {pieSegments.map((segment) => (
                 <path
                   key={segment.name}
                   d={segment.pathData}
                   fill={segment.color}
-                  className={`transition-all duration-200 cursor-pointer ${
+                  className={`transition-all duration-200 cursor-pointer touch-manipulation ${
                     segment.isHovered ? 'opacity-80 transform scale-105' : 'opacity-100'
                   }`}
-                  onMouseEnter={() => setHoveredCategory(segment.name)}
-                  onMouseLeave={() => setHoveredCategory(null)}
+                  onMouseEnter={() => !isMobile && setHoveredCategory(segment.name)}
+                  onMouseLeave={() => !isMobile && setHoveredCategory(null)}
+                  onTouchStart={() => setHoveredCategory(segment.name)}
+                  onTouchEnd={() => setTimeout(() => setHoveredCategory(null), 2000)}
                 />
               ))}
             </svg>
@@ -118,47 +136,70 @@ export default function ExpenseChart({
             {/* Center label */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(totalExpenses)}
+                <div className={`${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-gray-900`}>
+                  {isMobile
+                    ? new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                        notation: 'compact'
+                      }).format(totalExpenses)
+                    : formatCurrency(totalExpenses)
+                  }
                 </div>
-                <div className="text-sm text-gray-500">Total Spent</div>
+                <div className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-500`}>Total Spent</div>
               </div>
             </div>
           </div>
 
           {/* Legend */}
-          <div className="flex-1 space-y-3">
-            {categories.map((category) => (
+          <div className={`flex-1 ${isMobile ? 'space-y-2' : 'space-y-3'}`}>
+            {(isMobile ? categories.slice(0, 5) : categories).map((category) => (
               <div
                 key={category.name}
-                className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 cursor-pointer ${
+                className={`flex items-center justify-between ${isMobile ? 'p-2' : 'p-3'} rounded-lg transition-all duration-200 cursor-pointer touch-manipulation ${
                   hoveredCategory === category.name
                     ? 'bg-gray-50 shadow-sm'
-                    : 'hover:bg-gray-50'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
                 }`}
-                onMouseEnter={() => setHoveredCategory(category.name)}
-                onMouseLeave={() => setHoveredCategory(null)}
+                onMouseEnter={() => !isMobile && setHoveredCategory(category.name)}
+                onMouseLeave={() => !isMobile && setHoveredCategory(null)}
+                onTouchStart={() => setHoveredCategory(category.name)}
+                onTouchEnd={() => setTimeout(() => setHoveredCategory(null), 1500)}
               >
-                <div className="flex items-center space-x-3">
+                <div className={`flex items-center ${isMobile ? 'space-x-2' : 'space-x-3'}`}>
                   <div className="flex items-center space-x-2">
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className={`${isMobile ? 'w-2.5 h-2.5' : 'w-3 h-3'} rounded-full`}
                       style={{ backgroundColor: category.color }}
                     />
-                    <span className="text-lg">{category.icon}</span>
+                    <span className={`${isMobile ? 'text-base' : 'text-lg'}`}>{category.icon}</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {category.name}
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-900`}>
+                      {isMobile && category.name.length > 12
+                        ? category.name.substring(0, 10) + '...'
+                        : category.name
+                      }
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-500`}>
                       {category.percentage}% of total
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {formatCurrency(category.amount)}
+                  <p className={`${isMobile ? 'text-xs' : 'text-sm'} font-semibold text-gray-900`}>
+                    {isMobile
+                      ? new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                          notation: 'compact'
+                        }).format(category.amount)
+                      : formatCurrency(category.amount)
+                    }
                   </p>
                 </div>
               </div>
