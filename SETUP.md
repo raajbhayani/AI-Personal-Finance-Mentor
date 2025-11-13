@@ -9,7 +9,7 @@
 
 2. **Configure required variables** in `.env.local`
    - Generate JWT secrets (see instructions below)
-   - Add your Anthropic API key
+   - Add your AI API key
    - Configure MongoDB connection
 
 3. **Install dependencies**
@@ -37,7 +37,7 @@
 
 - **Node.js** 18+
 - **MongoDB** (local installation OR MongoDB Atlas account)
-- **Anthropic API Key** (for AI features)
+- **AI API Key** (for AI-powered financial advice features)
 
 ## 🔐 Environment Configuration
 
@@ -155,12 +155,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### Step 3: AI Configuration
 
-1. **Get Anthropic API Key**
-   - Visit [Anthropic Console](https://console.anthropic.com/)
-   - Create account and generate API key
+1. **Get AI API Key**
+   - This application uses AI for financial advice
+   - Get an API key from your AI provider (e.g., Anthropic Console: https://console.anthropic.com/)
    - Add to `.env.local`:
    ```env
-   ANTHROPIC_API_KEY=sk-ant-api03-your-actual-key-here
+   AI_API_KEY=your-ai-api-key-here
+   # Or use: ANTHROPIC_API_KEY=sk-ant-api03-your-key (for backward compatibility)
    ```
 
 ## 📁 Complete .env.local Template
@@ -186,7 +187,8 @@ NEXTAUTH_URL=http://localhost:3001
 BCRYPT_SALT_ROUNDS=12
 
 # AI Features
-ANTHROPIC_API_KEY=sk-ant-api03-your-anthropic-api-key
+AI_API_KEY=your-ai-api-key-here
+# Or use ANTHROPIC_API_KEY for backward compatibility
 
 # Development
 LOG_LEVEL=info
@@ -207,7 +209,7 @@ CACHE_TTL=300
 
 3. **Test AI features**
    - Navigate to the chat interface
-   - Send a test message to verify Anthropic API key
+   - Send a test message to verify AI API key is working
 
 ## 🔧 Optional Integrations
 
@@ -344,9 +346,9 @@ sudo chown -R $(whoami) /usr/local/var/log/mongodb
 ### AI Features Not Working
 
 **Error: "Invalid API key"**
-- Verify Anthropic API key is correct
-- Check API key has sufficient credits
-- Ensure key starts with `sk-ant-api03-`
+- Verify AI API key is correct in .env.local
+- Check API key has sufficient credits with your AI provider
+- Ensure the key format matches your provider's requirements
 
 ### Development Server Issues
 
@@ -357,8 +359,8 @@ sudo chown -R $(whoami) /usr/local/var/log/mongodb
 ## 📚 Additional Resources
 
 - [MongoDB Installation Guide](https://docs.mongodb.com/manual/installation/)
-- [Anthropic API Documentation](https://docs.anthropic.com/)
 - [Next.js Documentation](https://nextjs.org/docs)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
 
 ## 🆘 Getting Help
 

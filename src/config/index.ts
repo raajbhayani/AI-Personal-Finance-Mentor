@@ -1,6 +1,12 @@
 function validateEnv() {
-  const requiredVars = ['MONGODB_URI', 'JWT_SECRET', 'ANTHROPIC_API_KEY'];
+  const requiredVars = ['MONGODB_URI', 'JWT_SECRET'];
   const missing = requiredVars.filter(key => !process.env[key]);
+
+  // Check for AI API key (support both generic and specific key names)
+  const aiApiKey = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY;
+  if (!aiApiKey) {
+    missing.push('AI_API_KEY (or ANTHROPIC_API_KEY)');
+  }
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
@@ -29,7 +35,7 @@ export const config = {
     bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10),
   },
   ai: {
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY!,
+    apiKey: (process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY)!,
   },
   email: {
     host: process.env.EMAIL_SERVER_HOST,
