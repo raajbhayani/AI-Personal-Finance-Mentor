@@ -3,7 +3,7 @@ import { FinancialProfile } from './financialAnalysis';
 import config from '@/config';
 
 export interface AIMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   content: string;
 }
 
@@ -84,9 +84,15 @@ export class AIService {
   }
 
   private buildSystemPrompt(context: ConversationContext): string {
-    const { financialProfile } = context;
+    const { financialProfile, conversationSummary } = context;
 
-    return `You are an expert AI personal finance mentor with deep knowledge of financial planning, budgeting, investing, and wealth management. Your role is to provide personalized, actionable financial advice based on the user's current financial situation.
+    let systemPrompt = `You are an expert AI personal finance mentor with deep knowledge of financial planning, budgeting, investing, and wealth management. Your role is to provide personalized, actionable financial advice based on the user's current financial situation.`;
+
+    if (conversationSummary) {
+      systemPrompt += `\n\nPREVIOUS CONVERSATION CONTEXT:\n${conversationSummary}\n`;
+    }
+
+    systemPrompt += `
 
 CURRENT USER FINANCIAL PROFILE:
 - Total Balance: $${financialProfile.totalBalance.toFixed(2)}
@@ -122,6 +128,8 @@ GUIDELINES FOR RESPONSES:
 IMPORTANT: Never provide specific investment recommendations for individual stocks, bonds, or other securities. Focus on general asset allocation principles, diversification strategies, and types of investment vehicles that might be appropriate for their situation and risk tolerance.
 
 Remember: You are providing educational financial guidance, not professional financial advice. Encourage users to consult with qualified financial advisors for major financial decisions.`;
+
+    return systemPrompt;
   }
 
   private buildMessageHistory(
@@ -130,24 +138,20 @@ Remember: You are providing educational financial guidance, not professional fin
   ): AIMessage[] {
     const messages: AIMessage[] = [];
 
-    if (context.conversationSummary) {
-      messages.push({
-        role: 'system',
-        content: `Previous conversation summary: ${context.conversationSummary}`,
-      });
-    }
-
+    // Add recent messages (excluding any system messages)
     context.recentMessages.forEach(msg => {
-      if (msg.role !== 'system') {
+      if (msg.role === 'user' || msg.role === 'assistant') {
         messages.push(msg);
       }
     });
 
+    // Add the current user query
     messages.push({
       role: 'user',
       content: userQuery,
     });
 
+    // Return the last 10 messages to keep context manageable
     return messages.slice(-10);
   }
 
