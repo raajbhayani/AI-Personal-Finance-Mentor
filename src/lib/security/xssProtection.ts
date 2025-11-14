@@ -54,7 +54,7 @@ export class XSSProtectionService {
     ],
     'connect-src': [
       "'self'",
-      'https://api.anthropic.com', // For AI service
+      'https://api.anthropic.com', // AI service API
       'https://*.vercel.app',
       'wss://*.vercel.app',
     ],
@@ -111,7 +111,7 @@ export class XSSProtectionService {
     ],
     'connect-src': [
       "'self'",
-      'https://api.anthropic.com',
+      'https://api.anthropic.com', // AI service API
     ],
     'frame-src': [
       "'none'",

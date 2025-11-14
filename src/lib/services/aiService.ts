@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { FinancialProfile } from './financialAnalysis';
+import config from '@/config';
 
 export interface AIMessage {
   role: 'user' | 'assistant' | 'system';
@@ -33,12 +34,12 @@ export class AIService {
   private readonly model = 'ai-model-latest';
 
   constructor() {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is required');
+    if (!config.ai.apiKey) {
+      throw new Error('AI API key is required. Please set AI_API_KEY environment variable.');
     }
 
     this.anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: config.ai.apiKey,
     });
   }
 

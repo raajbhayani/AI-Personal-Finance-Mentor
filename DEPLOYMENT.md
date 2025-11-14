@@ -220,7 +220,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 MONGODB_URI=mongodb://localhost:27017/ai-finance-mentor
 JWT_SECRET=your-development-jwt-secret
 NEXTAUTH_SECRET=your-development-nextauth-secret
-ANTHROPIC_API_KEY=your-anthropic-api-key
+AI_API_KEY=your-ai-api-key
 ```
 
 #### Staging
