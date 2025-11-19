@@ -51,7 +51,12 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   }, [currentSrc, fallbackSrc, onError]);
 
   // Generate optimized src with format and quality
-  const getOptimizedSrc = (originalSrc: string) => {
+  const getOptimizedSrc = (originalSrc: typeof src) => {
+    // For StaticImageData or StaticRequire, return as-is (Next.js handles it)
+    if (typeof originalSrc !== 'string') {
+      return originalSrc;
+    }
+
     if (originalSrc.startsWith('data:') || originalSrc.startsWith('blob:')) {
       return originalSrc;
     }

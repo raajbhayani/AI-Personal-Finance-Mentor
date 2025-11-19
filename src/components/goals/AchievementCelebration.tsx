@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Award, Star, Trophy, Target, Party } from 'lucide-react';
+import { Award, Star, Trophy, Target, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 import { formatCurrency } from '../../lib/utils/dashboard';
 
@@ -69,6 +69,7 @@ export default function AchievementCelebration({
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isVisible, autoClose, duration, onClose]);
 
   // Generate confetti when achievement shows
@@ -85,6 +86,7 @@ export default function AchievementCelebration({
 
       return () => clearTimeout(stopTimer);
     }
+    return undefined;
   }, [isVisible, achievement]);
 
   const generateConfetti = () => {
@@ -232,9 +234,9 @@ export default function AchievementCelebration({
             {/* Celebration Message */}
             <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 mb-6 border border-yellow-200">
               <div className="flex items-center justify-center space-x-2 text-yellow-800">
-                <Party className="h-5 w-5" />
+                <Sparkles className="h-5 w-5" />
                 <span className="font-medium">Keep up the great work!</span>
-                <Party className="h-5 w-5" />
+                <Sparkles className="h-5 w-5" />
               </div>
               <p className="text-sm text-yellow-700 mt-1">
                 Every step brings you closer to financial freedom.

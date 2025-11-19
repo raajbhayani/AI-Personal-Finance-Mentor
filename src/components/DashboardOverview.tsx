@@ -372,7 +372,7 @@ export default function DashboardOverview() {
             type="network"
             variant="inline"
             message="Failed to load recent transactions"
-            onRetry={() => refetchTransactions()}
+            onRetry={async () => { await refetchTransactions(); }}
           />
         )}
       </div>

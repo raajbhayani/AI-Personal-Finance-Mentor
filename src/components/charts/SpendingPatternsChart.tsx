@@ -209,8 +209,7 @@ export default function SpendingPatternsChart({
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(107, 114, 128, 0.1)',
-          borderDash: [5, 5]
+          color: 'rgba(107, 114, 128, 0.1)'
         },
         ticks: {
           callback: function(value) {
@@ -245,8 +244,7 @@ export default function SpendingPatternsChart({
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(107, 114, 128, 0.1)',
-          borderDash: [5, 5]
+          color: 'rgba(107, 114, 128, 0.1)'
         },
         ticks: {
           callback: function(value) {

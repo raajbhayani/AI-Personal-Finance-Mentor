@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const { onError, level = 'component' } = this.props;
     const { errorId } = this.state;
 
@@ -53,15 +53,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     const baseError = error instanceof BaseError
       ? error
       : new SystemError(
-          ErrorCode.SYSTEM_ERROR,
           `React ${level} error: ${error.message}`,
+          ErrorCode.INTERNAL_SERVER_ERROR,
           {
-            componentStack: errorInfo.componentStack,
-            errorBoundary: level,
-            retryCount: this.state.retryCount,
-          },
-          [],
-          errorId || undefined
+            correlationId: errorId || undefined,
+            additionalData: {
+              componentStack: errorInfo.componentStack,
+              errorBoundary: level,
+              retryCount: this.state.retryCount,
+            },
+          }
         );
 
     // Log the error with context
@@ -94,7 +95,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.reportError(baseError, errorInfo, errorId);
   }
 
-  componentWillUnmount() {
+  override componentWillUnmount() {
     // Clear any pending retry timeouts
     this.retryTimeouts.forEach(timeout => clearTimeout(timeout));
     this.retryTimeouts.clear();
@@ -155,7 +156,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     const { retryCount } = this.state;
 
     if (retryCount >= maxRetries) {
-      logger.warn('Maximum retry attempts reached', undefined, {
+      logger.warn('Maximum retry attempts reached', {
         metadata: {
           errorBoundary: true,
           retryCount,
@@ -216,7 +217,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     );
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return this.renderFallback();
     }

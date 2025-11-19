@@ -14,6 +14,8 @@ import {
   Legend,
   ChartOptions,
   ChartData,
+  ChartEvent,
+  ActiveElement,
   Filler
 } from 'chart.js';
 import { Line, Bar, Doughnut, Pie } from 'react-chartjs-2';
@@ -94,7 +96,7 @@ const getCommonOptions = (type: string, isMobile = false): ChartOptions<any> => 
     intersect: false,
     mode: 'index',
   },
-  onHover: (event, elements) => {
+  onHover: (event: ChartEvent, elements: ActiveElement[]) => {
     if (event.native?.target) {
       (event.native.target as HTMLElement).style.cursor = elements.length > 0 ? 'pointer' : 'default';
     }
@@ -115,7 +117,7 @@ const getCommonOptions = (type: string, isMobile = false): ChartOptions<any> => 
           weight: '500'
         },
         color: '#374151',
-        generateLabels: function(chart) {
+        generateLabels: function(chart: ChartJS) {
           const labels = ChartJS.defaults.plugins.legend.labels.generateLabels(chart);
           // Limit legend items on mobile for better readability
           return isMobile && labels.length > 6 ? labels.slice(0, 5).concat([{
@@ -190,7 +192,7 @@ const getCommonOptions = (type: string, isMobile = false): ChartOptions<any> => 
         maxRotation: isMobile ? 45 : 0,
         minRotation: isMobile ? 45 : 0,
         maxTicksLimit: isMobile ? 6 : 12,
-        callback: function(value: any, index: number) {
+        callback: function(this: any, value: any, index: number): string | number | undefined {
           // On mobile, show fewer ticks to prevent overcrowding
           if (isMobile && this.getLabelForValue) {
             const label = this.getLabelForValue(value);

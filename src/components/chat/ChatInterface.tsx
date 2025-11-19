@@ -27,6 +27,7 @@ export default function ChatInterface({ className }: ChatInterfaceProps) {
       // Clear unread state when chat is opened
       setHasUnreadMessages(false);
       setUnreadCount(0);
+      return undefined;
     }
   }, [isChatOpen]);
 

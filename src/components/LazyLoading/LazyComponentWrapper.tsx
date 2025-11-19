@@ -4,7 +4,7 @@ import { ComponentSkeleton } from '../Loading/ComponentSkeleton';
 
 interface LazyComponentWrapperProps {
   fallback?: React.ReactNode;
-  errorFallback?: React.ReactNode;
+  errorFallback?: (error: Error, errorId: string, retry: () => void) => React.ReactNode;
   retryable?: boolean;
   minLoadingTime?: number;
   className?: string;
@@ -91,7 +91,7 @@ export function withLazyLoading<P extends object>(
         level="component"
       >
         <Suspense fallback={fallbackWithMinTime}>
-          <Component {...props} />
+          <Component {...(props as any)} />
         </Suspense>
       </ErrorBoundary>
     );
@@ -218,5 +218,3 @@ export function createLazyRoute<P extends object>(
     minLoadingTime: 300,
   });
 }
-
-export default LazyComponentWrapper;

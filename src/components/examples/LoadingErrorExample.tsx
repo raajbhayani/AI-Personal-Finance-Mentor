@@ -128,7 +128,7 @@ export default function LoadingErrorExample() {
               type="network"
               variant="card"
               error={dataError}
-              onRetry={canRetry ? () => retryFetch(mockFetchData) : undefined}
+              onRetry={canRetry ? async () => { await retryFetch(mockFetchData); } : undefined}
               canRetry={canRetry}
             />
           )}

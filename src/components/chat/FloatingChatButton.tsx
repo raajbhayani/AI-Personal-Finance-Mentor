@@ -39,6 +39,7 @@ export default function FloatingChatButton({
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [hasUnreadMessages, isOpen]);
 
   return (

@@ -16,82 +16,82 @@ export const LazyGoals = createLazyRoute(
   'goals'
 );
 
-export const LazyAnalytics = createLazyRoute(
-  () => import('../../pages/analytics'),
-  'analytics'
-);
+// export const LazyAnalytics = createLazyRoute(
+//   () => import('../../pages/analytics'),
+//   'analytics'
+// );
 
-export const LazyProfile = createLazyRoute(
-  () => import('../../pages/profile'),
-  'profile'
-);
+// export const LazyProfile = createLazyRoute(
+//   () => import('../../pages/profile'),
+//   'profile'
+// );
 
 export const LazySettings = createLazyRoute(
   () => import('../../pages/settings'),
   'settings'
 );
 
-// AI Chat component - separate chunk due to size
-export const LazyAIChat = createLazyRoute(
-  () => import('../../components/AI/ChatInterface'),
-  'ai-chat'
-);
+// // AI Chat component - separate chunk due to size
+// export const LazyAIChat = createLazyRoute(
+//   () => import('../../components/AI/ChatInterface'),
+//   'ai-chat'
+// );
 
-// Reports component - heavy with charts
-export const LazyReports = createLazyRoute(
-  () => import('../../components/Reports/ReportsPage'),
-  'reports'
-);
+// // Reports component - heavy with charts
+// export const LazyReports = createLazyRoute(
+//   () => import('../../components/Reports/ReportsPage'),
+//   'reports'
+// );
 
-// Authentication pages
-export const LazyLogin = createLazyRoute(
-  () => import('../../pages/auth/login'),
-  'auth-login'
-);
+// // Authentication pages
+// export const LazyLogin = createLazyRoute(
+//   () => import('../../pages/auth/login'),
+//   'auth-login'
+// );
 
-export const LazySignup = createLazyRoute(
-  () => import('../../pages/auth/signup'),
-  'auth-signup'
-);
+// export const LazySignup = createLazyRoute(
+//   () => import('../../pages/auth/signup'),
+//   'auth-signup'
+// );
 
-export const LazyForgotPassword = createLazyRoute(
-  () => import('../../pages/auth/forgot-password'),
-  'auth-forgot-password'
-);
+// export const LazyForgotPassword = createLazyRoute(
+//   () => import('../../pages/auth/forgot-password'),
+//   'auth-forgot-password'
+// );
 
-// Admin pages (if user has admin role)
-export const LazyAdminDashboard = createLazyRoute(
-  () => import('../../pages/admin/dashboard'),
-  'admin-dashboard'
-);
+// // Admin pages (if user has admin role)
+// export const LazyAdminDashboard = createLazyRoute(
+//   () => import('../../pages/admin/dashboard'),
+//   'admin-dashboard'
+// );
 
-export const LazyAdminUsers = createLazyRoute(
-  () => import('../../pages/admin/users'),
-  'admin-users'
-);
+// export const LazyAdminUsers = createLazyRoute(
+//   () => import('../../pages/admin/users'),
+//   'admin-users'
+// );
 
-// Heavy feature components
-export const LazyBudgetPlanner = createLazyRoute(
-  () => import('../../components/Budget/BudgetPlanner'),
-  'budget-planner'
-);
+// // Heavy feature components
+// export const LazyBudgetPlanner = createLazyRoute(
+//   () => import('../../components/Budget/BudgetPlanner'),
+//   'budget-planner'
+// );
 
-export const LazyInvestmentTracker = createLazyRoute(
-  () => import('../../components/Investment/InvestmentTracker'),
-  'investment-tracker'
-);
+// export const LazyInvestmentTracker = createLazyRoute(
+//   () => import('../../components/Investment/InvestmentTracker'),
+//   'investment-tracker'
+// );
 
-export const LazyTaxCalculator = createLazyRoute(
-  () => import('../../components/Tax/TaxCalculator'),
-  'tax-calculator'
-);
+// export const LazyTaxCalculator = createLazyRoute(
+//   () => import('../../components/Tax/TaxCalculator'),
+//   'tax-calculator'
+// );
 
 // Export components that should be preloaded for critical paths
 export const CRITICAL_COMPONENTS = [
   () => import('../../pages/dashboard'),
   () => import('../../pages/transactions'),
-  () => import('../../components/Navigation/Sidebar'),
-  () => import('../../components/Common/Header'),
+  // () => import('../../components/Navigation/Sidebar'),
+  // () => import('../../components/Common/Header'),
 ];
 
 // Export components for route-based code splitting
@@ -99,19 +99,19 @@ export const ROUTE_COMPONENTS = {
   '/dashboard': LazyDashboard,
   '/transactions': LazyTransactions,
   '/goals': LazyGoals,
-  '/analytics': LazyAnalytics,
-  '/profile': LazyProfile,
+  // '/analytics': LazyAnalytics,
+  // '/profile': LazyProfile,
   '/settings': LazySettings,
-  '/ai-chat': LazyAIChat,
-  '/reports': LazyReports,
-  '/login': LazyLogin,
-  '/signup': LazySignup,
-  '/forgot-password': LazyForgotPassword,
-  '/admin/dashboard': LazyAdminDashboard,
-  '/admin/users': LazyAdminUsers,
-  '/budget-planner': LazyBudgetPlanner,
-  '/investment-tracker': LazyInvestmentTracker,
-  '/tax-calculator': LazyTaxCalculator,
+  // '/ai-chat': LazyAIChat,
+  // '/reports': LazyReports,
+  // '/login': LazyLogin,
+  // '/signup': LazySignup,
+  // '/forgot-password': LazyForgotPassword,
+  // '/admin/dashboard': LazyAdminDashboard,
+  // '/admin/users': LazyAdminUsers,
+  // '/budget-planner': LazyBudgetPlanner,
+  // '/investment-tracker': LazyInvestmentTracker,
+  // '/tax-calculator': LazyTaxCalculator,
 };
 
 // Export for dynamic imports based on user role
@@ -120,22 +120,22 @@ export const getRoleBasedComponents = (userRole: string) => {
     LazyDashboard,
     LazyTransactions,
     LazyGoals,
-    LazyProfile,
+    // LazyProfile,
     LazySettings,
   ];
 
   const adminComponents = userRole === 'ADMIN' ? [
-    LazyAdminDashboard,
-    LazyAdminUsers,
+    // LazyAdminDashboard,
+    // LazyAdminUsers,
   ] : [];
 
   const premiumComponents = ['PREMIUM', 'ADMIN'].includes(userRole) ? [
-    LazyAnalytics,
-    LazyReports,
-    LazyAIChat,
-    LazyBudgetPlanner,
-    LazyInvestmentTracker,
-    LazyTaxCalculator,
+    // LazyAnalytics,
+    // LazyReports,
+    // LazyAIChat,
+    // LazyBudgetPlanner,
+    // LazyInvestmentTracker,
+    // LazyTaxCalculator,
   ] : [];
 
   return [...baseComponents, ...adminComponents, ...premiumComponents];

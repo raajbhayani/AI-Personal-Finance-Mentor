@@ -244,7 +244,7 @@ export default function BudgetOverview() {
           variant="card"
           title="Error loading budgets"
           error={budgetsError}
-          onRetry={refetchBudgets}
+          onRetry={async () => { await refetchBudgets(); }}
           showDetails={process.env.NODE_ENV === 'development'}
         />
       ) : filteredBudgets.length === 0 ? (

@@ -139,11 +139,13 @@ export default function CategoryAnalysisChart({
                 const dataset = data.datasets[0];
                 const value = dataset.data[i] as number;
                 const percentage = ((value / totalAmount) * 100).toFixed(1);
+                const bgColor = Array.isArray(dataset.backgroundColor) ? dataset.backgroundColor[i] : dataset.backgroundColor;
+                const borderColor = Array.isArray(dataset.borderColor) ? dataset.borderColor[i] : dataset.borderColor;
 
                 return {
                   text: `${label} (${percentage}%)`,
-                  fillStyle: dataset.backgroundColor?.[i] as string,
-                  strokeStyle: dataset.borderColor?.[i] as string,
+                  fillStyle: bgColor as string,
+                  strokeStyle: borderColor as string,
                   lineWidth: dataset.borderWidth as number,
                   hidden: false,
                   index: i
@@ -249,7 +251,7 @@ export default function CategoryAnalysisChart({
                 <CardTitle>Spending by Category</CardTitle>
                 <div className="flex items-center space-x-2">
                   <Button
-                    variant={chartType === 'doughnut' ? 'default' : 'outline'}
+                    variant={chartType === 'doughnut' ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => setChartType('doughnut')}
                     className="p-2"
@@ -257,7 +259,7 @@ export default function CategoryAnalysisChart({
                     <PieIcon className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant={chartType === 'bar' ? 'default' : 'outline'}
+                    variant={chartType === 'bar' ? 'primary' : 'outline'}
                     size="sm"
                     onClick={() => setChartType('bar')}
                     className="p-2"
